@@ -10,10 +10,8 @@ enum class TaskType {
     LONG_TERM
 }
 
-// @Entity tells Room: "Create a database table named 'tasks' for this class"
 @Entity(tableName = "tasks")
 data class Task(
-    // @PrimaryKey tells Room: "This is the unique ID for this row"
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,
     val type: TaskType,
@@ -28,9 +26,9 @@ data class RewardNote(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-// We use this to store the global score persistently
 @Entity(tableName = "user_stats")
 data class UserStats(
-    @PrimaryKey val id: Int = 0, // Always 0, single row table
-    val score: Int = 0
+    @PrimaryKey val id: Int = 0,
+    val score: Int = 0,
+    val themeIndex: Int = 0 // 0=Purple, 1=Ocean, 2=Nature, 3=Sunset
 )

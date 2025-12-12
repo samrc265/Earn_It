@@ -1,15 +1,15 @@
 package com.example.earnit.ui.screens
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,84 +19,83 @@ import com.example.earnit.viewmodel.MainViewModel
 @Composable
 fun RewardsScreen(viewModel: MainViewModel) {
     val score by viewModel.score.collectAsStateWithLifecycle()
-    val notes by viewModel.notes.collectAsStateWithLifecycle()
-    val rewardPoints = score / 100
-    
-    var showNoteDialog by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        
-        // --- Score Card ---
+    // Calculations
+    val rewardPoints = score / 100
+    val progressToNext = (score % 100) / 100f
+
+    // Animation for Progress Bar
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressToNext,
+        animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+        label = "ProgressAnimation"
+    )
+
+    // Animation for Pulsing Star
+    val infiniteTransition = rememberInfiniteTransition(label = "StarPulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "StarScale"
+    )
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                modifier = Modifier.padding(32.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Score
                 Text("Total Score", style = MaterialTheme.typography.labelLarge)
-                Text("$score", fontSize = 48.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
+                Text("$score", fontSize = 60.sp, fontWeight = FontWeight.Bold)
+
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Rewards
                 Text("Reward Points Available", style = MaterialTheme.typography.labelLarge)
-                Text("★ $rewardPoints", fontSize = 32.sp, color = MaterialTheme.colorScheme.primary)
-                Text("(1 Point per 100 Score)", style = MaterialTheme.typography.bodySmall)
-            }
-        }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700), // Gold Color
+                        modifier = Modifier.size(40.dp).scale(scale)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("$rewardPoints", fontSize = 48.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
 
-        Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Notes ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Reward Log / Notes", style = MaterialTheme.typography.titleLarge)
-            IconButton(onClick = { showNoteDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Note")
-            }
-        }
-        
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-            items(notes) { note ->
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                // Progress Bar
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(note.content, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { viewModel.deleteNote(note) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.outline)
-                        }
+                        Text("Progress to next point", style = MaterialTheme.typography.bodySmall)
+                        Text("${(progressToNext * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier.fillMaxWidth().height(12.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    )
                 }
             }
         }
     }
-
-    if (showNoteDialog) {
-        AddNoteDialog(onDismiss = { showNoteDialog = false }, onAdd = { viewModel.addNote(it) })
-    }
-}
-
-@Composable
-fun AddNoteDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
-    var content by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Log Reward / Cheat Meal") },
-        text = { OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Details") }) },
-        confirmButton = {
-            Button(onClick = {
-                if (content.isNotEmpty()) {
-                    onAdd(content)
-                    onDismiss()
-                }
-            }) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
 }

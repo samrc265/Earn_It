@@ -29,6 +29,9 @@ interface EarnItDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: RewardNote)
 
+    @Update
+    suspend fun updateNote(note: RewardNote) // Added this for editing
+
     @Delete
     suspend fun deleteNote(note: RewardNote)
 

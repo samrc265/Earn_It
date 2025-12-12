@@ -17,8 +17,6 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
 
-    // --- State (Connected to Database) ---
-    // These automatically update when the database changes
     val tasks: StateFlow<List<Task>> = repository.tasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -28,7 +26,15 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
     val notes: StateFlow<List<RewardNote>> = repository.notes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val themeIndex: StateFlow<Int> = repository.themeIndex
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     // --- Actions ---
+
+    fun setTheme(index: Int) {
+        viewModelScope.launch { repository.updateTheme(index) }
+    }
+
     fun addTask(name: String, type: TaskType) {
         val points = when (type) {
             TaskType.DAILY -> 2
@@ -43,10 +49,7 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
     fun toggleTask(task: Task) {
         viewModelScope.launch {
             val newStatus = !task.isCompleted
-            // 1. Update the task status
             repository.updateTask(task.copy(isCompleted = newStatus))
-
-            // 2. Calculate point change (Add points if checking, subtract if unchecking)
             val pointsDelta = if (newStatus) task.points else -task.points
             repository.updateScore(pointsDelta)
         }
@@ -54,8 +57,6 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
 
     fun deleteTask(task: Task) {
         viewModelScope.launch {
-            // Optional: If you delete a completed task, should you lose the points? 
-            // Currently: Yes.
             if (task.isCompleted) {
                 repository.updateScore(-task.points)
             }
@@ -63,20 +64,31 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
-    fun addNote(content: String) {
+    fun addNote(content: String): Boolean {
+        val currentScore = score.value
+        if (currentScore >= 100) {
+            viewModelScope.launch {
+                repository.updateScore(-100)
+                repository.addNote(RewardNote(content = content))
+            }
+            return true
+        }
+        return false
+    }
+
+    fun updateNote(note: RewardNote, newContent: String) {
         viewModelScope.launch {
-            repository.addNote(RewardNote(content = content))
+            repository.updateNote(note.copy(content = newContent))
         }
     }
 
     fun deleteNote(note: RewardNote) {
         viewModelScope.launch {
+            repository.updateScore(100)
             repository.deleteNote(note)
         }
     }
 
-    // --- Factory ---
-    // This tells Android how to create this ViewModel with the Repository dependency
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
