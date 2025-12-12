@@ -47,10 +47,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Observe theme index here
             val themeIndex by mainViewModel.themeIndex.collectAsStateWithLifecycle()
+            val darkMode by mainViewModel.darkMode.collectAsStateWithLifecycle()
 
-            EarnItTheme(themeIndex = themeIndex) {
+            EarnItTheme(themeIndex = themeIndex, darkModePreference = darkMode) {
                 EarnItApp(viewModel = mainViewModel)
             }
         }
@@ -76,6 +76,7 @@ fun EarnItApp(viewModel: MainViewModel) {
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background, // Ensures background changes with theme
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(currentTitle) },
@@ -104,14 +105,16 @@ fun EarnItApp(viewModel: MainViewModel) {
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.background, // Matches theme
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         },
         bottomBar = {
             if (currentRoute != Screen.Settings.route) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer // Matches theme surface
+                ) {
                     val currentDestination = navBackStackEntry?.destination
                     bottomNavItems.forEach { screen ->
                         NavigationBarItem(

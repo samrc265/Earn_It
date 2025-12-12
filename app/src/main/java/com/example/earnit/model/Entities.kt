@@ -30,5 +30,6 @@ data class RewardNote(
 data class UserStats(
     @PrimaryKey val id: Int = 0,
     val score: Int = 0,
-    val themeIndex: Int = 0 // 0=Purple, 1=Ocean, 2=Nature, 3=Sunset
+    val themeIndex: Int = 0, // 0=Purple, 1=Ocean, 2=Nature, 3=Sunset
+    val darkMode: Int = 0    // 0=System, 1=Light, 2=Dark
 )

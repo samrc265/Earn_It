@@ -12,11 +12,11 @@ class EarnItRepository(private val dao: EarnItDao) {
     val tasks: Flow<List<Task>> = dao.getAllTasks()
     val notes: Flow<List<RewardNote>> = dao.getAllNotes()
 
-    // Get simple streams of data for the ViewModel
     private val _userStats = dao.getUserStats()
 
     val score: Flow<Int> = _userStats.map { it?.score ?: 0 }
     val themeIndex: Flow<Int> = _userStats.map { it?.themeIndex ?: 0 }
+    val darkMode: Flow<Int> = _userStats.map { it?.darkMode ?: 0 }
 
     suspend fun addTask(task: Task) = dao.insertTask(task)
     suspend fun updateTask(task: Task) = dao.updateTask(task)
@@ -26,7 +26,6 @@ class EarnItRepository(private val dao: EarnItDao) {
     suspend fun updateNote(note: RewardNote) = dao.updateNote(note)
     suspend fun deleteNote(note: RewardNote) = dao.deleteNote(note)
 
-    // Helper to update specific fields in UserStats without overwriting others
     private suspend fun updateUserStats(transform: (UserStats) -> UserStats) {
         val current = dao.getUserStats().firstOrNull() ?: UserStats()
         dao.insertOrUpdateStats(transform(current))
@@ -38,5 +37,9 @@ class EarnItRepository(private val dao: EarnItDao) {
 
     suspend fun updateTheme(index: Int) {
         updateUserStats { it.copy(themeIndex = index) }
+    }
+
+    suspend fun updateDarkMode(mode: Int) {
+        updateUserStats { it.copy(darkMode = mode) }
     }
 }

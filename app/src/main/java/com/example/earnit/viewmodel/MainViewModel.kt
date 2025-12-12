@@ -29,10 +29,17 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
     val themeIndex: StateFlow<Int> = repository.themeIndex
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val darkMode: StateFlow<Int> = repository.darkMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     // --- Actions ---
 
     fun setTheme(index: Int) {
         viewModelScope.launch { repository.updateTheme(index) }
+    }
+
+    fun setDarkMode(mode: Int) {
+        viewModelScope.launch { repository.updateDarkMode(mode) }
     }
 
     fun addTask(name: String, type: TaskType) {

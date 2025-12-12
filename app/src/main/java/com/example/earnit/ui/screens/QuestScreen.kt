@@ -1,11 +1,15 @@
 package com.example.earnit.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,29 +29,24 @@ fun QuestScreen(viewModel: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp), // Space for FAB
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             // Helper to render sections
             fun renderSection(title: String, type: TaskType, points: String) {
-                val sectionTasks = tasks.filter { it.type == type && !it.isCompleted }
-                if (sectionTasks.isNotEmpty()) {
-                    item { SectionHeader(title, points) }
-                    items(sectionTasks) { task ->
-                        TaskItem(task, onToggle = { viewModel.toggleTask(task) }, onDelete = { viewModel.deleteTask(task) })
-                    }
-                } else if (type == TaskType.DAILY) {
-                    // Friendly message if Daily is empty
-                    item { SectionHeader(title, points) }
-                    item {
-                        Text(
-                            "All daily quests complete! Great job!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-                        )
-                    }
+                val allTasks = tasks.filter { it.type == type }
+                val activeTasks = allTasks.filter { !it.isCompleted }
+                val completedTasks = allTasks.filter { it.isCompleted }
+
+                item {
+                    QuestSection(
+                        title = title,
+                        points = points,
+                        activeTasks = activeTasks,
+                        completedTasks = completedTasks,
+                        onToggle = { viewModel.toggleTask(it) },
+                        onDelete = { viewModel.deleteTask(it) }
+                    )
                 }
             }
 
@@ -75,9 +74,71 @@ fun QuestScreen(viewModel: MainViewModel) {
 }
 
 @Composable
+fun QuestSection(
+    title: String,
+    points: String,
+    activeTasks: List<Task>,
+    completedTasks: List<Task>,
+    onToggle: (Task) -> Unit,
+    onDelete: (Task) -> Unit
+) {
+    var completedExpanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Header always visible
+        SectionHeader(title, points)
+
+        // Active Tasks
+        if (activeTasks.isEmpty()) {
+            Text(
+                "No active quests.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
+        } else {
+            activeTasks.forEach { task ->
+                TaskItem(task, onToggle = { onToggle(task) }, onDelete = { onDelete(task) })
+            }
+        }
+
+        // Completed Dropdown
+        if (completedTasks.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { completedExpanded = !completedExpanded }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Completed (${completedTasks.size})",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    imageVector = if (completedExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            AnimatedVisibility(visible = completedExpanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    completedTasks.forEach { task ->
+                        TaskItem(task, onToggle = { onToggle(task) }, onDelete = { onDelete(task) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun SectionHeader(title: String, subtitle: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -97,7 +158,9 @@ fun SectionHeader(title: String, subtitle: String) {
 fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (task.isCompleted) MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.6f) else MaterialTheme.colorScheme.surface
+        ),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
@@ -108,7 +171,9 @@ fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
             Text(
                 text = task.name,
                 modifier = Modifier.weight(1f).padding(start = 8.dp),
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                textDecoration = if (task.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.outline)

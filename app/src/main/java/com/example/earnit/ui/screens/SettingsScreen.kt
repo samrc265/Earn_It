@@ -20,6 +20,7 @@ import com.example.earnit.viewmodel.MainViewModel
 @Composable
 fun SettingsScreen(viewModel: MainViewModel) {
     val themeIndex by viewModel.themeIndex.collectAsStateWithLifecycle()
+    val darkMode by viewModel.darkMode.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -28,12 +29,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Appearance", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Choose your vibe", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Color Picker Grid
+        // --- Color Palette ---
+        Text("Theme Color", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
@@ -44,7 +45,35 @@ fun SettingsScreen(viewModel: MainViewModel) {
             ThemeCircle(color = SunsetPrimary, isSelected = themeIndex == 3, onClick = { viewModel.setTheme(3) }, label = "Sunset")
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- Dark Mode ---
+        Text("Night Mode", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FilterChip(
+                selected = darkMode == 0,
+                onClick = { viewModel.setDarkMode(0) },
+                label = { Text("System") }
+            )
+            FilterChip(
+                selected = darkMode == 1,
+                onClick = { viewModel.setDarkMode(1) },
+                label = { Text("Light") }
+            )
+            FilterChip(
+                selected = darkMode == 2,
+                onClick = { viewModel.setDarkMode(2) },
+                label = { Text("Dark") }
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
 
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -53,7 +82,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("About Earn It", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall)
+                Text("Version 1.0.1", style = MaterialTheme.typography.bodySmall)
                 Text("Gamify your life, one task at a time.", style = MaterialTheme.typography.bodySmall)
             }
         }

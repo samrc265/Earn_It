@@ -3,11 +3,7 @@ package com.example.earnit.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
@@ -15,67 +11,124 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val PurpleScheme = lightColorScheme(
+// --- Light Schemes ---
+private val PurpleLightScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40
+    // Default containers are purple-ish by default in Material3
 )
 
-private val OceanScheme = lightColorScheme(
+private val OceanLightScheme = lightColorScheme(
     primary = OceanPrimary,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = OceanPrimaryContainer, // Fixes Rewards Box
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF001F24),
     secondary = OceanSecondary,
+    secondaryContainer = OceanSecondaryContainer, // Fixes Log Box
     tertiary = OceanTertiary,
     background = OceanBackground,
     surface = OceanSurface,
-    surfaceVariant = OceanSurface
+    surfaceContainer = OceanSurfaceContainer // Fixes Navigation Bar
 )
 
-private val NatureScheme = lightColorScheme(
+private val NatureLightScheme = lightColorScheme(
     primary = NaturePrimary,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = NaturePrimaryContainer,
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF002106),
     secondary = NatureSecondary,
+    secondaryContainer = NatureSecondaryContainer,
     tertiary = NatureTertiary,
     background = NatureBackground,
     surface = NatureSurface,
-    surfaceVariant = NatureSurface
+    surfaceContainer = NatureSurfaceContainer
 )
 
-private val SunsetScheme = lightColorScheme(
+private val SunsetLightScheme = lightColorScheme(
     primary = SunsetPrimary,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = SunsetPrimaryContainer,
+    onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF410002),
     secondary = SunsetSecondary,
+    secondaryContainer = SunsetSecondaryContainer,
     tertiary = SunsetTertiary,
     background = SunsetBackground,
     surface = SunsetSurface,
-    surfaceVariant = SunsetSurface
+    surfaceContainer = SunsetSurfaceContainer
+)
+
+// --- Dark Schemes ---
+private val PurpleDarkScheme = darkColorScheme(
+    primary = Purple80,
+    secondary = PurpleGrey80,
+    tertiary = Pink80
+)
+
+private val OceanDarkScheme = darkColorScheme(
+    primary = OceanPrimaryDark,
+    primaryContainer = OceanPrimaryContainerDark,
+    secondary = OceanSecondaryDark,
+    secondaryContainer = OceanSecondaryContainerDark,
+    tertiary = OceanTertiaryDark,
+    background = OceanBackgroundDark,
+    surface = OceanSurfaceDark,
+    surfaceContainer = OceanSurfaceContainerDark
+)
+
+private val NatureDarkScheme = darkColorScheme(
+    primary = NaturePrimaryDark,
+    primaryContainer = NaturePrimaryContainerDark,
+    secondary = NatureSecondaryDark,
+    secondaryContainer = NatureSecondaryContainerDark,
+    tertiary = NatureTertiaryDark,
+    background = NatureBackgroundDark,
+    surface = NatureSurfaceDark,
+    surfaceContainer = NatureSurfaceContainerDark
+)
+
+private val SunsetDarkScheme = darkColorScheme(
+    primary = SunsetPrimaryDark,
+    primaryContainer = SunsetPrimaryContainerDark,
+    secondary = SunsetSecondaryDark,
+    secondaryContainer = SunsetSecondaryContainerDark,
+    tertiary = SunsetTertiaryDark,
+    background = SunsetBackgroundDark,
+    surface = SunsetSurfaceDark,
+    surfaceContainer = SunsetSurfaceContainerDark
 )
 
 @Composable
 fun EarnItTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false,
-    themeIndex: Int = 0, // Passed from MainActivity
+    themeIndex: Int = 0,
+    darkModePreference: Int = 0, // 0=System, 1=Light, 2=Dark
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        // You can enable dynamicColor if you want the system wallpaper colors,
-        // but explicit themes usually look better for gamified apps.
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        // Custom Themes
-        themeIndex == 1 -> OceanScheme
-        themeIndex == 2 -> NatureScheme
-        themeIndex == 3 -> SunsetScheme
-        else -> PurpleScheme // Default
+    val darkTheme = when (darkModePreference) {
+        1 -> false
+        2 -> true
+        else -> isSystemInDarkTheme()
+    }
+
+    val colorScheme = when (themeIndex) {
+        1 -> if (darkTheme) OceanDarkScheme else OceanLightScheme
+        2 -> if (darkTheme) NatureDarkScheme else NatureLightScheme
+        3 -> if (darkTheme) SunsetDarkScheme else SunsetLightScheme
+        else -> if (darkTheme) PurpleDarkScheme else PurpleLightScheme
     }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            // Use the surface container color for the status bar to blend with app bars
+            window.statusBarColor = colorScheme.background.toArgb()
+            // Use the surface container color for the navigation bar
+            window.navigationBarColor = colorScheme.surfaceContainer.toArgb()
+
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
