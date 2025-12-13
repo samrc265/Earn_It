@@ -1,5 +1,7 @@
 package com.example.earnit.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +29,7 @@ fun LogScreen(viewModel: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
 
-            // Header
+            // Header with Animated Counter
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp),
@@ -39,16 +41,27 @@ fun LogScreen(viewModel: MainViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Spent Rewards", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+
+                    // Animated points badge
                     Surface(
                         color = MaterialTheme.colorScheme.surface,
                         shape = MaterialTheme.shapes.small
                     ) {
-                        Text(
-                            text = "$rewardPoints pts left",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        AnimatedContent(
+                            targetState = rewardPoints,
+                            transitionSpec = {
+                                slideInVertically { height -> height } + fadeIn() togetherWith
+                                        slideOutVertically { height -> -height } + fadeOut()
+                            },
+                            label = "PointsAnim"
+                        ) { count ->
+                            Text(
+                                text = "$count pts left",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -56,15 +69,16 @@ fun LogScreen(viewModel: MainViewModel) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 100.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).animateContentSize()
             ) {
-                items(notes) { note ->
+                items(items = notes, key = { it.id }) { note ->
                     Card(
                         elevation = CardDefaults.cardElevation(2.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { noteToEdit = note }
+                            .animateItem() // Standard list animation (Compose 1.7+)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),

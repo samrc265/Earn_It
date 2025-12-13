@@ -43,10 +43,11 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
     }
 
     fun addTask(name: String, type: TaskType) {
+        // Updated Point Values
         val points = when (type) {
             TaskType.DAILY -> 2
             TaskType.SHORT_TERM -> 10
-            TaskType.LONG_TERM -> 50
+            TaskType.LONG_TERM -> 25
         }
         viewModelScope.launch {
             repository.addTask(Task(name = name, type = type, points = points))

@@ -1,10 +1,11 @@
 package com.example.earnit.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -14,17 +15,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.earnit.model.Task
 import com.example.earnit.model.TaskType
 import com.example.earnit.viewmodel.MainViewModel
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
+import kotlinx.coroutines.delay
 
 @Composable
 fun QuestScreen(viewModel: MainViewModel) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
+
+    // State to trigger fireworks animation. Using a timestamp ensures unique events.
+    var fireworkTrigger by remember { mutableLongStateOf(0L) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -32,7 +47,7 @@ fun QuestScreen(viewModel: MainViewModel) {
             contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Helper to render sections
+
             fun renderSection(title: String, type: TaskType, points: String) {
                 val allTasks = tasks.filter { it.type == type }
                 val activeTasks = allTasks.filter { !it.isCompleted }
@@ -45,14 +60,15 @@ fun QuestScreen(viewModel: MainViewModel) {
                         activeTasks = activeTasks,
                         completedTasks = completedTasks,
                         onToggle = { viewModel.toggleTask(it) },
-                        onDelete = { viewModel.deleteTask(it) }
+                        onDelete = { viewModel.deleteTask(it) },
+                        onCelebrate = { fireworkTrigger = System.currentTimeMillis() }
                     )
                 }
             }
 
-            renderSection("Daily Quests", TaskType.DAILY, "2 pts")
-            renderSection("Short Term Goals", TaskType.SHORT_TERM, "10 pts")
-            renderSection("Long Term Goals", TaskType.LONG_TERM, "50 pts")
+            renderSection("Quests", TaskType.DAILY, "2 XP")
+            renderSection("Short Term Goals", TaskType.SHORT_TERM, "10 XP")
+            renderSection("Long Term Goals", TaskType.LONG_TERM, "25 XP")
         }
 
         FloatingActionButton(
@@ -63,6 +79,9 @@ fun QuestScreen(viewModel: MainViewModel) {
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add Task")
         }
+
+        // Fireworks Overlay - sits on top of everything
+        FireworksOverlay(trigger = fireworkTrigger)
     }
 
     if (showDialog) {
@@ -80,12 +99,15 @@ fun QuestSection(
     activeTasks: List<Task>,
     completedTasks: List<Task>,
     onToggle: (Task) -> Unit,
-    onDelete: (Task) -> Unit
+    onDelete: (Task) -> Unit,
+    onCelebrate: () -> Unit
 ) {
     var completedExpanded by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Header always visible
+    Column(
+        modifier = Modifier.animateContentSize(animationSpec = tween(600, easing = FastOutSlowInEasing)),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         SectionHeader(title, points)
 
         // Active Tasks
@@ -98,7 +120,14 @@ fun QuestSection(
             )
         } else {
             activeTasks.forEach { task ->
-                TaskItem(task, onToggle = { onToggle(task) }, onDelete = { onDelete(task) })
+                key(task.id) {
+                    TaskItem(
+                        task = task,
+                        onToggle = { onToggle(task) },
+                        onDelete = { onDelete(task) },
+                        onCelebrate = onCelebrate
+                    )
+                }
             }
         }
 
@@ -108,14 +137,16 @@ fun QuestSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { completedExpanded = !completedExpanded }
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Completed (${completedTasks.size})",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = if (completedExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = "Expand",
@@ -124,10 +155,21 @@ fun QuestSection(
                 )
             }
 
-            AnimatedVisibility(visible = completedExpanded) {
+            AnimatedVisibility(
+                visible = completedExpanded,
+                enter = expandVertically(tween(300)) + fadeIn(tween(300)),
+                exit = shrinkVertically(tween(300)) + fadeOut(tween(300))
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     completedTasks.forEach { task ->
-                        TaskItem(task, onToggle = { onToggle(task) }, onDelete = { onDelete(task) })
+                        key(task.id) {
+                            TaskItem(
+                                task = task,
+                                onToggle = { onToggle(task) },
+                                onDelete = { onDelete(task) },
+                                onCelebrate = { } // No animation when marking incomplete/deleting
+                            )
+                        }
                     }
                 }
             }
@@ -155,32 +197,231 @@ fun SectionHeader(title: String, subtitle: String) {
 }
 
 @Composable
-fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit) {
+fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, onCelebrate: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    val transition = updateTransition(targetState = task.isCompleted, label = "TaskCompletion")
+
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val goldColor = Color(0xFFFFF7D0)
+
+    val backgroundColor by transition.animateColor(
+        label = "BgColor",
+        transitionSpec = {
+            if (targetState) {
+                keyframes {
+                    durationMillis = 1000
+                    surfaceColor at 0
+                    goldColor at 300
+                    surfaceVariantColor.copy(alpha=0.6f) at 1000
+                }
+            } else {
+                tween(500)
+            }
+        }
+    ) { completed ->
+        if (completed) surfaceVariantColor.copy(alpha=0.6f)
+        else surfaceColor
+    }
+
+    val contentColor by transition.animateColor(
+        label = "ContentColor",
+        transitionSpec = { tween(durationMillis = 1000) }
+    ) { completed ->
+        if (completed) onSurfaceVariantColor.copy(alpha = 0.6f)
+        else onSurfaceColor
+    }
+
+    val scale by transition.animateFloat(
+        label = "Scale",
+        transitionSpec = {
+            if (targetState) {
+                keyframes {
+                    durationMillis = 800
+                    1f at 0
+                    1.12f at 300
+                    0.95f at 800
+                }
+            } else {
+                spring(stiffness = Spring.StiffnessLow)
+            }
+        }
+    ) { completed ->
+        if (completed) 0.98f else 1f
+    }
+
     Card(
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (task.isCompleted) MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.6f) else MaterialTheme.colorScheme.surface
-        ),
-        shape = MaterialTheme.shapes.medium
+        elevation = CardDefaults.cardElevation(defaultElevation = if (task.isCompleted) 0.dp else 2.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = task.isCompleted, onCheckedChange = { onToggle() })
+            Box(contentAlignment = Alignment.Center) {
+                Checkbox(
+                    checked = task.isCompleted,
+                    onCheckedChange = {
+                        if (!task.isCompleted) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onCelebrate() // Trigger the global animation
+                        }
+                        onToggle()
+                    },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+            }
+
             Text(
                 text = task.name,
                 modifier = Modifier.weight(1f).padding(start = 8.dp),
                 style = MaterialTheme.typography.bodyLarge,
-                textDecoration = if (task.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                color = contentColor
             )
+
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.outline)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = if (task.isCompleted) MaterialTheme.colorScheme.outline.copy(alpha=0.5f) else MaterialTheme.colorScheme.outline
+                )
             }
         }
     }
 }
+
+@Composable
+fun FireworksOverlay(trigger: Long) {
+    // Increased particle count for more dense fireworks
+    val particles1 = remember { List(80) { Particle() } }
+    val particles2 = remember { List(80) { Particle() } }
+    val particles3 = remember { List(80) { Particle() } }
+
+    val animatable1 = remember { Animatable(0f) }
+    val animatable2 = remember { Animatable(0f) }
+    val animatable3 = remember { Animatable(0f) }
+
+    // Logic to restart animations when trigger changes
+    LaunchedEffect(trigger) {
+        if (trigger > 0) {
+            animatable1.snapTo(0f)
+            animatable2.snapTo(0f)
+            animatable3.snapTo(0f)
+            animatable1.animateTo(1f, animationSpec = tween(1500, easing = LinearOutSlowInEasing))
+        }
+    }
+
+    LaunchedEffect(trigger) {
+        if (trigger > 0) {
+            delay(150)
+            animatable2.animateTo(1f, animationSpec = tween(1500, easing = LinearOutSlowInEasing))
+        }
+    }
+
+    LaunchedEffect(trigger) {
+        if (trigger > 0) {
+            delay(300)
+            animatable3.animateTo(1f, animationSpec = tween(1500, easing = LinearOutSlowInEasing))
+        }
+    }
+
+    // Theme-based colors for consistency
+    val themeColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.inversePrimary
+    )
+    val goldColor = Color(0xFFFFD700)
+
+    // Combine theme colors with gold for highlights
+    val allFireworksColors = remember(trigger) { (themeColors + goldColor).shuffled() }
+
+    // Render if any animation is active
+    if (animatable1.value > 0f || animatable2.value > 0f || animatable3.value > 0f) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val width = size.width
+            val height = size.height
+
+            // Draw Burst 1 (Center)
+            if (animatable1.value > 0f && animatable1.value < 1f) {
+                drawBurst(
+                    particles = particles1,
+                    progress = animatable1.value,
+                    center = Offset(width / 2, height / 3),
+                    colors = allFireworksColors
+                )
+            }
+
+            // Draw Burst 2 (Left)
+            if (animatable2.value > 0f && animatable2.value < 1f) {
+                drawBurst(
+                    particles = particles2,
+                    progress = animatable2.value,
+                    center = Offset(width / 4, height / 2.5f),
+                    colors = allFireworksColors
+                )
+            }
+
+            // Draw Burst 3 (Right)
+            if (animatable3.value > 0f && animatable3.value < 1f) {
+                drawBurst(
+                    particles = particles3,
+                    progress = animatable3.value,
+                    center = Offset(width * 0.75f, height / 2.5f),
+                    colors = allFireworksColors
+                )
+            }
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBurst(
+    particles: List<Particle>,
+    progress: Float,
+    center: Offset,
+    colors: List<Color>
+) {
+    particles.forEachIndexed { index, particle ->
+        // Explosion radius
+        val distance = (300f * progress * particle.speed)
+
+        // Gravity effect
+        val gravity = 400f * progress * progress
+
+        val x = center.x + (cos(particle.angle) * distance).toFloat()
+        val y = center.y + (sin(particle.angle) * distance).toFloat() + gravity
+
+        // Fade out
+        val alpha = (1f - progress).coerceIn(0f, 1f)
+        val radius = (6.dp.toPx() * (1f - progress) * particle.sizeScale)
+
+        val color = colors[index % colors.size]
+
+        drawCircle(
+            color = color.copy(alpha = alpha),
+            radius = radius,
+            center = Offset(x, y)
+        )
+    }
+}
+
+private data class Particle(
+    val angle: Double = Random.nextDouble(0.0, 2 * Math.PI),
+    val speed: Float = Random.nextFloat() * 1.5f + 0.5f,
+    val sizeScale: Float = Random.nextFloat() * 0.8f + 0.2f,
+    val colorVariant: Int = Random.nextInt(0, 3)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

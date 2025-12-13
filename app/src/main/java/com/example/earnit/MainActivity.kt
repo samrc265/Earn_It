@@ -35,8 +35,8 @@ import com.example.earnit.viewmodel.MainViewModel
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Quests : Screen("quests", "Quests", Icons.Default.List)
-    data object Rewards : Screen("rewards", "Points", Icons.Default.Star)
-    data object Log : Screen("log", "Log", Icons.Default.Edit)
+    data object Rewards : Screen("rewards", "Progress", Icons.Default.Star) // Changed from "Points"
+    data object Log : Screen("log", "Reward Log", Icons.Default.Edit) // Changed from "Log"
     data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
 }
 
@@ -67,16 +67,40 @@ fun EarnItApp(viewModel: MainViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Quests.route
 
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    // Updated Titles
     val currentTitle = when(currentRoute) {
-        Screen.Quests.route -> "Daily Quests"
-        Screen.Rewards.route -> "My Points"
-        Screen.Log.route -> "Activity Log"
+        Screen.Quests.route -> "Quests" // Changed from "Daily Quests"
+        Screen.Rewards.route -> "Progress" // Changed from "My Points"
+        Screen.Log.route -> "Reward Log" // Changed from "Activity Log"
         Screen.Settings.route -> "Settings"
         else -> "Earn It"
     }
 
+    // Determine Info Message for Dialog
+    val infoMessage = when(currentRoute) {
+        Screen.Quests.route -> "Complete quests to earn XP!\n\n• Daily Quests: 2 XP\n• Short Term: 10 XP\n• Long Term: 25 XP\n\nCompleted tasks move to the bottom list."
+        Screen.Rewards.route -> "Track your Level and XP.\n\nEvery 100 XP you earn converts into 1 Reward Point.\n\nUse Reward Points to redeem real-life treats!"
+        Screen.Log.route -> "Log your rewards here.\n\nEach entry costs 1 Reward Point.\n\nYou can tap an entry to edit or delete it (deleting refunds the point)."
+        else -> "Earn It helps you gamify your life by tracking tasks and earning rewards."
+    }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("About $currentTitle") },
+            text = { Text(infoMessage) },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("Got it")
+                }
+            }
+        )
+    }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background, // Ensures background changes with theme
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(currentTitle) },
@@ -89,15 +113,10 @@ fun EarnItApp(viewModel: MainViewModel) {
                 },
                 actions = {
                     if (currentRoute != Screen.Settings.route) {
-                        IconButton(onClick = {
-                            val msg = when(currentRoute) {
-                                Screen.Quests.route -> "Tasks disappear when checked!"
-                                Screen.Rewards.route -> "Track your score here"
-                                Screen.Log.route -> "Keep notes of your rewards"
-                                else -> "Earn It App"
-                            }
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        }) { Icon(Icons.Default.Info, contentDescription = "Info") }
+                        // Info Button now triggers Dialog
+                        IconButton(onClick = { showInfoDialog = true }) {
+                            Icon(Icons.Default.Info, contentDescription = "Info")
+                        }
 
                         IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -105,7 +124,7 @@ fun EarnItApp(viewModel: MainViewModel) {
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background, // Matches theme
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
@@ -113,7 +132,7 @@ fun EarnItApp(viewModel: MainViewModel) {
         bottomBar = {
             if (currentRoute != Screen.Settings.route) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer // Matches theme surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     val currentDestination = navBackStackEntry?.destination
                     bottomNavItems.forEach { screen ->
