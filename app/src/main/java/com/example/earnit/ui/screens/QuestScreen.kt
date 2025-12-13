@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +37,6 @@ fun QuestScreen(viewModel: MainViewModel) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
 
-    // State to trigger fireworks animation. Using a timestamp ensures unique events.
     var fireworkTrigger by remember { mutableLongStateOf(0L) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -80,7 +78,6 @@ fun QuestScreen(viewModel: MainViewModel) {
             Icon(Icons.Default.Add, contentDescription = "Add Task")
         }
 
-        // Fireworks Overlay - sits on top of everything
         FireworksOverlay(trigger = fireworkTrigger)
     }
 
@@ -110,7 +107,6 @@ fun QuestSection(
     ) {
         SectionHeader(title, points)
 
-        // Active Tasks
         if (activeTasks.isEmpty()) {
             Text(
                 "No active quests.",
@@ -131,7 +127,6 @@ fun QuestSection(
             }
         }
 
-        // Completed Dropdown
         if (completedTasks.isNotEmpty()) {
             Row(
                 modifier = Modifier
@@ -167,7 +162,7 @@ fun QuestSection(
                                 task = task,
                                 onToggle = { onToggle(task) },
                                 onDelete = { onDelete(task) },
-                                onCelebrate = { } // No animation when marking incomplete/deleting
+                                onCelebrate = { }
                             )
                         }
                     }
@@ -201,6 +196,7 @@ fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, onCelebrate
     val haptic = LocalHapticFeedback.current
     val transition = updateTransition(targetState = task.isCompleted, label = "TaskCompletion")
 
+    // Define colors as simple values to avoid Composable context issues inside transitionSpec
     val surfaceColor = MaterialTheme.colorScheme.surface
     val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
@@ -270,7 +266,7 @@ fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, onCelebrate
                     onCheckedChange = {
                         if (!task.isCompleted) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onCelebrate() // Trigger the global animation
+                            onCelebrate()
                         }
                         onToggle()
                     },
@@ -302,7 +298,6 @@ fun TaskItem(task: Task, onToggle: () -> Unit, onDelete: () -> Unit, onCelebrate
 
 @Composable
 fun FireworksOverlay(trigger: Long) {
-    // Increased particle count for more dense fireworks
     val particles1 = remember { List(80) { Particle() } }
     val particles2 = remember { List(80) { Particle() } }
     val particles3 = remember { List(80) { Particle() } }
@@ -311,7 +306,6 @@ fun FireworksOverlay(trigger: Long) {
     val animatable2 = remember { Animatable(0f) }
     val animatable3 = remember { Animatable(0f) }
 
-    // Logic to restart animations when trigger changes
     LaunchedEffect(trigger) {
         if (trigger > 0) {
             animatable1.snapTo(0f)
@@ -335,7 +329,7 @@ fun FireworksOverlay(trigger: Long) {
         }
     }
 
-    // Theme-based colors for consistency
+    // Theme-based colors
     val themeColors = listOf(
         MaterialTheme.colorScheme.primary,
         MaterialTheme.colorScheme.secondary,
@@ -344,41 +338,37 @@ fun FireworksOverlay(trigger: Long) {
     )
     val goldColor = Color(0xFFFFD700)
 
-    // Combine theme colors with gold for highlights
+    // Remember shuffled colors for consistent burst
     val allFireworksColors = remember(trigger) { (themeColors + goldColor).shuffled() }
 
-    // Render if any animation is active
     if (animatable1.value > 0f || animatable2.value > 0f || animatable3.value > 0f) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
 
-            // Draw Burst 1 (Center)
             if (animatable1.value > 0f && animatable1.value < 1f) {
                 drawBurst(
                     particles = particles1,
                     progress = animatable1.value,
-                    center = Offset(width / 2, height / 3),
+                    center = Offset(x = width / 2, y = height / 3),
                     colors = allFireworksColors
                 )
             }
 
-            // Draw Burst 2 (Left)
             if (animatable2.value > 0f && animatable2.value < 1f) {
                 drawBurst(
                     particles = particles2,
                     progress = animatable2.value,
-                    center = Offset(width / 4, height / 2.5f),
+                    center = Offset(x = width / 4, y = height / 2.5f),
                     colors = allFireworksColors
                 )
             }
 
-            // Draw Burst 3 (Right)
             if (animatable3.value > 0f && animatable3.value < 1f) {
                 drawBurst(
                     particles = particles3,
                     progress = animatable3.value,
-                    center = Offset(width * 0.75f, height / 2.5f),
+                    center = Offset(x = width * 0.75f, y = height / 2.5f),
                     colors = allFireworksColors
                 )
             }
@@ -393,16 +383,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBurst(
     colors: List<Color>
 ) {
     particles.forEachIndexed { index, particle ->
-        // Explosion radius
         val distance = (300f * progress * particle.speed)
-
-        // Gravity effect
         val gravity = 400f * progress * progress
 
         val x = center.x + (cos(particle.angle) * distance).toFloat()
         val y = center.y + (sin(particle.angle) * distance).toFloat() + gravity
 
-        // Fade out
         val alpha = (1f - progress).coerceIn(0f, 1f)
         val radius = (6.dp.toPx() * (1f - progress) * particle.sizeScale)
 
@@ -411,7 +397,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBurst(
         drawCircle(
             color = color.copy(alpha = alpha),
             radius = radius,
-            center = Offset(x, y)
+            center = Offset(x = x, y = y)
         )
     }
 }
