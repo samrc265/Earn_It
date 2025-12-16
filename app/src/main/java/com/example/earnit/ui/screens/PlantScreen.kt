@@ -2,8 +2,11 @@ package com.example.earnit.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -14,17 +17,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.earnit.model.TaskType
+import com.example.earnit.model.TreeType
 import com.example.earnit.ui.components.PixelTree
 import com.example.earnit.viewmodel.MainViewModel
 
@@ -34,7 +35,11 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val themeIndex by viewModel.themeIndex.collectAsStateWithLifecycle()
 
-    // Calculate Task Progress
+    if (plantState.stage == 0) {
+        SeedSelectionScreen(onPlant = { type -> viewModel.startNewPlant(type) }, onNavigateToForest = onNavigateToForest)
+        return
+    }
+
     val dailyTasks = tasks.filter { it.type == TaskType.DAILY }
     val completedCount = dailyTasks.count { it.isCompleted }
     val totalCount = dailyTasks.size
@@ -43,7 +48,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
 
     var showHarvestDialog by remember { mutableStateOf(false) }
 
-    // Check for harvest
     LaunchedEffect(plantState) {
         if (plantState.stage == 4 && plantState.daysAtMaturity >= 3) {
             showHarvestDialog = true
@@ -52,11 +56,11 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // --- Forest Button (Top Left) ---
+        // Forest Button (Top Left)
         Box(
             modifier = Modifier
                 .padding(16.dp)
-                .align(Alignment.TopStart) // Changed to TopStart
+                .align(Alignment.TopStart)
                 .zIndex(1f)
         ) {
             SmallFloatingActionButton(
@@ -64,7 +68,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             ) {
-                // Using Emoji for Tree icon
                 Text("🌲", fontSize = 24.sp)
             }
         }
@@ -113,15 +116,18 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 20.dp),
+                            .padding(bottom = 20.dp)
+                            .fillMaxWidth()
+                            .height(250.dp), // Fixed height container
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         PixelTree(
                             stage = plantState.stage,
                             health = plantState.health,
-                            themeIndex = themeIndex,
-                            modifier = Modifier.size(220.dp),
-                            pixelSize = 8.dp
+                            type = plantState.treeType,
+                            seed = plantState.seed,
+                            modifier = Modifier.fillMaxSize(), // Fill container
+                            pixelSize = null // Auto-scale
                         )
                     }
                 }
@@ -134,7 +140,7 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 plantState.isDead -> "Withered"
                 plantState.health < 3 -> "Needs Water"
                 plantState.stage == 4 -> "Mature (${plantState.daysAtMaturity}/3 Days)"
-                else -> "Healthy"
+                else -> "Growing (${plantState.treeType.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }})"
             }
 
             val statusColor = when {
@@ -159,7 +165,7 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 if (plantState.isDead) {
-                    // Restart Button
+                    // Restart
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         FilledIconButton(
                             onClick = { viewModel.restartPlant() },
@@ -178,7 +184,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 } else {
                     // Water/Grow Button
                     Box(contentAlignment = Alignment.Center) {
-                        // Circular Progress Indicator
                         val animatedProgress by animateFloatAsState(targetValue = progress, label = "DailyProgress")
 
                         CircularProgressIndicator(
@@ -198,7 +203,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                                 contentColor = if (canWater) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
-                            // Using Favorite (Heart) to symbolize caring/watering
                             Icon(
                                 Icons.Default.Favorite,
                                 contentDescription = "Water",
@@ -209,7 +213,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 }
             }
 
-            // Instruction Text below actions
             Spacer(modifier = Modifier.height(16.dp))
             if (!plantState.isDead) {
                 Text(
@@ -218,6 +221,9 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+            TextButton(onClick = { viewModel.debugGrowPlant() }) { Text("🛠️ Grow") }
         }
     }
 
@@ -229,6 +235,80 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                 showHarvestDialog = false
             }
         )
+    }
+}
+
+@Composable
+fun SeedSelectionScreen(onPlant: (TreeType) -> Unit, onNavigateToForest: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier.padding(16.dp).align(Alignment.TopStart).zIndex(1f)
+        ) {
+            SmallFloatingActionButton(
+                onClick = onNavigateToForest,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            ) { Text("🌲", fontSize = 24.sp) }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "Choose a Seed",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("What will you grow next?", style = MaterialTheme.typography.bodyMedium)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(TreeType.values()) { type ->
+                    SeedCard(type = type, onClick = { onPlant(type) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SeedCard(type: TreeType, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                PixelTree(
+                    stage = 4,
+                    type = type,
+                    seed = 12345,
+                    modifier = Modifier.fillMaxSize(),
+                    pixelSize = null
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = type.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

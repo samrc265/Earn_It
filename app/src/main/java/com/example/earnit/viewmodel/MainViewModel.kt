@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
 
@@ -36,11 +37,9 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
-    // --- Plant Logic ---
-
     private suspend fun checkPlantWilting() {
         val currentPlant = plantState.value
-        if (currentPlant.stage == 0 || currentPlant.isDead) return // Seeds don't wilt
+        if (currentPlant.stage == 0 || currentPlant.isDead) return
 
         val lastWatered = currentPlant.lastWateredDate
         if (lastWatered == 0L) return
@@ -49,64 +48,42 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         val daysPassed = TimeUnit.MILLISECONDS.toDays(diff).toInt()
 
         if (daysPassed > 1) {
-            // Missed at least 1 day.
-            // Logic: 4 days total to kill.
-            // Healthy(3) -> Wilt1(2) -> Wilt2(1) -> Dead(0)
-
-            // If daysPassed is 2 (missed 1 day), subtract 1 health
-            // If daysPassed is 4 (missed 3 days), subtract 3 health (Death)
             val healthPenalty = daysPassed - 1
             val newHealth = (currentPlant.health - healthPenalty).coerceAtLeast(0)
-
             val isDead = newHealth == 0
-
-            repository.updatePlantState(currentPlant.copy(
-                health = newHealth,
-                isDead = isDead,
-                // If dead, reset stage? User prompt usually handles this,
-                // but let's keep stage to show the dead tree until they reset.
-            ))
+            repository.updatePlantState(currentPlant.copy(health = newHealth, isDead = isDead))
         }
     }
 
     fun waterPlant() {
         val currentPlant = plantState.value
-        if (currentPlant.isDead) return
+        if (currentPlant.isDead || currentPlant.stage == 0) return
 
-        // Check 2/3rds Daily Task Completion
         val dailyTasks = tasks.value.filter { it.type == TaskType.DAILY }
         val completed = dailyTasks.count { it.isCompleted }
         val total = dailyTasks.size
 
-        // Prevent watering if no tasks exist or logic not met
         if (total == 0) return
         val ratio = completed.toFloat() / total.toFloat()
 
         if (ratio >= 0.66f) {
             val today = System.currentTimeMillis()
-
-            // Check if already watered today
             val last = Calendar.getInstance().apply { timeInMillis = currentPlant.lastWateredDate }
             val now = Calendar.getInstance().apply { timeInMillis = today }
             val isSameDay = last.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) &&
                     last.get(Calendar.YEAR) == now.get(Calendar.YEAR)
 
             if (!isSameDay) {
-                // WATERING SUCCESS
                 var newStage = currentPlant.stage
                 var daysAtMat = currentPlant.daysAtMaturity
-
-                // Grow logic: If healthy, grow. If wilted, recover health first.
                 var newHealth = currentPlant.health
 
                 if (currentPlant.health < 3) {
-                    newHealth++ // Recover health
+                    newHealth++
                 } else {
-                    // Fully healthy, so we grow
                     if (currentPlant.stage < 4) {
                         newStage++
                     } else {
-                        // Already a tree, increase maturity counter
                         daysAtMat++
                     }
                 }
@@ -123,20 +100,65 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
+    // --- DEBUG ---
+    fun debugGrowPlant() {
+        val currentPlant = plantState.value
+        if (currentPlant.stage == 0) return
+
+        var newStage = currentPlant.stage
+        var daysAtMat = currentPlant.daysAtMaturity
+
+        if (currentPlant.stage < 4) {
+            newStage++
+        } else {
+            daysAtMat++
+        }
+
+        viewModelScope.launch {
+            repository.updatePlantState(currentPlant.copy(
+                stage = newStage,
+                health = 3,
+                daysAtMaturity = daysAtMat,
+                lastWateredDate = System.currentTimeMillis(),
+                isDead = false
+            ))
+        }
+    }
+
+    fun startNewPlant(type: TreeType) {
+        val newSeed = Random.nextLong()
+        viewModelScope.launch {
+            repository.updatePlantState(PlantState(
+                stage = 1,
+                health = 3,
+                treeType = type,
+                seed = newSeed,
+                lastWateredDate = System.currentTimeMillis()
+            ))
+        }
+    }
+
+    // Re-added restartPlant()
     fun restartPlant() {
         viewModelScope.launch {
-            repository.updatePlantState(PlantState()) // Reset to defaults
+            // Resets to Stage 0 (Seed), which triggers the SeedSelectionScreen in UI
+            repository.updatePlantState(PlantState())
         }
     }
 
     fun sendTreeToForest(name: String) {
+        val current = plantState.value
         val currentTheme = themeIndex.value
         viewModelScope.launch {
-            repository.moveTreeToForest(ForestTree(name = name, themeIndex = currentTheme))
+            repository.moveTreeToForest(ForestTree(
+                name = name,
+                themeIndex = currentTheme,
+                treeType = current.treeType,
+                seed = current.seed
+            ))
         }
     }
 
-    // --- Standard Actions ---
     fun setTheme(index: Int) = viewModelScope.launch { repository.updateTheme(index) }
     fun setDarkMode(mode: Int) = viewModelScope.launch { repository.updateDarkMode(mode) }
 

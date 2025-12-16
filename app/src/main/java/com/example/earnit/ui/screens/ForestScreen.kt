@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +29,7 @@ fun ForestScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("My Forest") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 }
             )
         }
@@ -48,20 +48,43 @@ fun ForestScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             ) {
                 items(forest) { tree ->
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)),
+                        modifier = Modifier.aspectRatio(0.8f) // Ensure consistent card shape
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.padding(16.dp).fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            // Render the mature tree
-                            Box(modifier = Modifier.size(80.dp), contentAlignment = Alignment.Center) {
-                                PixelTree(stage = 4, health = 3, themeIndex = tree.themeIndex, modifier = Modifier.size(60.dp), pixelSize = 2.dp)
+                            // Tree Container
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                PixelTree(
+                                    stage = 4,
+                                    health = 3,
+                                    type = tree.treeType,
+                                    seed = tree.seed,
+                                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                                    pixelSize = null // Enable auto-scaling to fit box
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(tree.name, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                            val date = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(tree.dateCompleted))
-                            Text(date, style = MaterialTheme.typography.bodySmall)
+
+                            // Info
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    tree.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                val date = SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(tree.dateCompleted))
+                                Text(date, style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                     }
                 }

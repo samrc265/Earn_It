@@ -11,10 +11,9 @@ import com.example.earnit.model.RewardNote
 import com.example.earnit.model.Task
 import com.example.earnit.model.UserStats
 
-// Update entities list to include PlantState and ForestTree
 @Database(
     entities = [Task::class, RewardNote::class, UserStats::class, PlantState::class, ForestTree::class],
-    version = 2, // Incremented version
+    version = 3, // Version bumped
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -28,7 +27,7 @@ abstract class EarnItDatabase : RoomDatabase() {
         fun getDatabase(context: Context): EarnItDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, EarnItDatabase::class.java, "earnit_database")
-                    .fallbackToDestructiveMigration() // This ensures the app doesn't crash on update (it will wipe old data)
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { Instance = it }
             }
