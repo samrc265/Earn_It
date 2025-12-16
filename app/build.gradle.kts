@@ -71,6 +71,10 @@ dependencies {
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
-    // KSP is the tool that generates the database code
+    // 4. KSP is the tool that generates the database code
     ksp("androidx.room:room-compiler:$room_version")
+    // 5. WorkManager for Notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // 6. Gson for Backup/Restore (JSON)
+    implementation("com.google.code.gson:gson:2.10.1")
 }

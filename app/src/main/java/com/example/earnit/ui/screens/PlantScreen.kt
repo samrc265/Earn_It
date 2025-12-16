@@ -10,15 +10,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -221,9 +218,6 @@ fun PlantScreen(viewModel: MainViewModel, onNavigateToForest: () -> Unit) {
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-            TextButton(onClick = { viewModel.debugGrowPlant() }) { Text("🛠️ Grow") }
         }
     }
 
