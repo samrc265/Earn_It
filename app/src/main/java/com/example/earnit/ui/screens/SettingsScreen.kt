@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,6 +75,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
             )
         }
 
+        Spacer(modifier = Modifier.height(32.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- Help / General ---
+        TextButton(
+            onClick = { viewModel.resetOnboarding() },
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("View Tutorial")
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         Card(
@@ -82,7 +98,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("About Earn It", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Version 1.0.1", style = MaterialTheme.typography.bodySmall)
+                Text("Version 1.0.2", style = MaterialTheme.typography.bodySmall)
                 Text("Gamify your life, one task at a time.", style = MaterialTheme.typography.bodySmall)
             }
         }

@@ -27,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.earnit.ui.components.OnboardingDialog
 import com.example.earnit.ui.screens.ForestScreen
 import com.example.earnit.ui.screens.LogScreen
 import com.example.earnit.ui.screens.PlantScreen
@@ -68,7 +69,12 @@ fun EarnItApp(viewModel: MainViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Plant added to the bottom navigation list
+    // Onboarding Logic
+    val showOnboarding by viewModel.showOnboarding.collectAsStateWithLifecycle()
+    if (showOnboarding) {
+        OnboardingDialog(onDismiss = { viewModel.completeOnboarding() })
+    }
+
     val bottomNavItems = listOf(Screen.Quests, Screen.Rewards, Screen.Plant, Screen.Log)
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -102,13 +108,11 @@ fun EarnItApp(viewModel: MainViewModel) {
         )
     }
 
-    // Hide Bottom Bar on Forest screen and Settings
     val showBottomBar = currentRoute != Screen.Settings.route && currentRoute != Screen.Forest.route
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            // We hide the main TopBar on the Forest screen because ForestScreen has its own TopBar
             if (currentRoute != Screen.Forest.route) {
                 CenterAlignedTopAppBar(
                     title = { Text(currentTitle) },

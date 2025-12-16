@@ -36,14 +36,13 @@ data class RewardNote(
 @Entity(tableName = "plant_state")
 data class PlantState(
     @PrimaryKey val id: Int = 0,
-    val stage: Int = 0, // 0=Seed (Not planted), 1=Sapling, 2=Small, 3=Medium, 4=Tree
+    val stage: Int = 0,
     val health: Int = 3,
     val lastWateredDate: Long = 0L,
     val daysAtMaturity: Int = 0,
     val isDead: Boolean = false,
-    // New Fields
     val treeType: TreeType = TreeType.PINE,
-    val seed: Long = 0L // The unique DNA for procedural generation
+    val seed: Long = 0L
 )
 
 @Entity(tableName = "forest")
@@ -52,7 +51,6 @@ data class ForestTree(
     val name: String,
     val dateCompleted: Long = System.currentTimeMillis(),
     val themeIndex: Int,
-    // New Fields
     val treeType: TreeType,
     val seed: Long
 )
@@ -63,5 +61,6 @@ data class UserStats(
     val score: Int = 0,
     val themeIndex: Int = 0,
     val darkMode: Int = 0,
-    val lastLoginDate: Long = 0L
+    val lastLoginDate: Long = 0L,
+    val isFirstLaunch: Boolean = true // New Flag: Defaults to true
 )

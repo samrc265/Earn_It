@@ -30,6 +30,9 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
     val themeIndex = repository.themeIndex.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
     val darkMode = repository.darkMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val showOnboarding = repository.isFirstLaunch
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     init {
         viewModelScope.launch {
             repository.checkDailyReset()
@@ -37,6 +40,16 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
+    // --- Onboarding ---
+    fun completeOnboarding() {
+        viewModelScope.launch { repository.completeOnboarding() }
+    }
+
+    fun resetOnboarding() {
+        viewModelScope.launch { repository.resetOnboarding() }
+    }
+
+    // --- Plant Logic ---
     private suspend fun checkPlantWilting() {
         val currentPlant = plantState.value
         if (currentPlant.stage == 0 || currentPlant.isDead) return
@@ -100,7 +113,6 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
-    // --- DEBUG ---
     fun debugGrowPlant() {
         val currentPlant = plantState.value
         if (currentPlant.stage == 0) return
@@ -138,10 +150,8 @@ class MainViewModel(private val repository: EarnItRepository) : ViewModel() {
         }
     }
 
-    // Re-added restartPlant()
     fun restartPlant() {
         viewModelScope.launch {
-            // Resets to Stage 0 (Seed), which triggers the SeedSelectionScreen in UI
             repository.updatePlantState(PlantState())
         }
     }
