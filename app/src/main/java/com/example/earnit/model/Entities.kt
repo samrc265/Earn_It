@@ -42,7 +42,8 @@ data class PlantState(
     val daysAtMaturity: Int = 0,
     val isDead: Boolean = false,
     val treeType: TreeType = TreeType.PINE,
-    val seed: Long = 0L
+    val seed: Long = 0L,
+    val wateringStreak: Int = 0 // New Field
 )
 
 @Entity(tableName = "forest")
@@ -62,5 +63,5 @@ data class UserStats(
     val themeIndex: Int = 0,
     val darkMode: Int = 0,
     val lastLoginDate: Long = 0L,
-    val isFirstLaunch: Boolean = true // New Flag: Defaults to true
+    val isFirstLaunch: Boolean = true
 )

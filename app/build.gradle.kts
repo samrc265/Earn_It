@@ -2,9 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // KSP Plugin for Room Database.
-    // NOTE: The version "1.9.22-1.0.17" must match your Kotlin version.
-    // If build fails, check https://github.com/google/ksp/releases for the matching version.
     id("com.google.devtools.ksp") version "2.0.21-1.0.26"
 }
 
@@ -77,4 +74,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     // 6. Gson for Backup/Restore (JSON)
     implementation("com.google.code.gson:gson:2.10.1")
+    // 7. Widgets (Glance)
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.glance:glance-material3:1.1.0")
 }

@@ -11,6 +11,10 @@ interface EarnItDao {
     @Query("SELECT * FROM tasks")
     fun getAllTasks(): Flow<List<Task>>
 
+    // NEW: Needed for Widget interaction
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    suspend fun getTaskById(id: String): Task?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: Task)
 
@@ -20,7 +24,6 @@ interface EarnItDao {
     @Delete
     suspend fun deleteTask(task: Task)
 
-    // Reset Logic: Uncheck all Daily tasks
     @Query("UPDATE tasks SET isCompleted = 0 WHERE type = 'DAILY'")
     suspend fun resetDailyTasks()
 

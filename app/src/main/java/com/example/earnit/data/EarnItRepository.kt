@@ -21,9 +21,11 @@ class EarnItRepository(private val dao: EarnItDao) {
     val darkMode: Flow<Int> = _userStats.map { it?.darkMode ?: 0 }
     val isFirstLaunch: Flow<Boolean> = _userStats.map { it?.isFirstLaunch ?: true }
 
+    // --- Tasks ---
     suspend fun addTask(task: Task) = dao.insertTask(task)
     suspend fun updateTask(task: Task) = dao.updateTask(task)
     suspend fun deleteTask(task: Task) = dao.deleteTask(task)
+    suspend fun getTaskById(id: String): Task? = dao.getTaskById(id) // New
 
     suspend fun updatePlantState(plant: PlantState) = dao.insertOrUpdatePlant(plant)
     suspend fun moveTreeToForest(tree: ForestTree) {
@@ -59,6 +61,5 @@ class EarnItRepository(private val dao: EarnItDao) {
     suspend fun updateDarkMode(mode: Int) = updateUserStats { it.copy(darkMode = mode) }
 
     suspend fun completeOnboarding() = updateUserStats { it.copy(isFirstLaunch = false) }
-    // New function to show tutorial again
     suspend fun resetOnboarding() = updateUserStats { it.copy(isFirstLaunch = true) }
 }

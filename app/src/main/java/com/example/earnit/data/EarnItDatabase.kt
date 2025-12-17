@@ -13,7 +13,7 @@ import com.example.earnit.model.UserStats
 
 @Database(
     entities = [Task::class, RewardNote::class, UserStats::class, PlantState::class, ForestTree::class],
-    version = 4, // Version Bumped for isFirstLaunch
+    version = 5, // Version Bump for wateringStreak
     exportSchema = false
 )
 @TypeConverters(Converters::class)
